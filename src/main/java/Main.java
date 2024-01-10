@@ -16,7 +16,7 @@ public class Main {
          String result = Expression1.parse(input);
          System.out.println(result);
        } catch (Exception e) {
-         //System.out.println("Error: " + e.getMessage());
+         System.out.println("Error: " + e.getMessage());
        }
      }
 
