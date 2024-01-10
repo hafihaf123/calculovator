@@ -161,9 +161,6 @@ class Expression1 {
     
     int lenC = characters.size();
     
-    System.out.println(characters);
-    System.out.println(numbers);
-    
     while (Utility.listContains(characters, "*/÷^abcdefghijklmnopqrstuvwxyz")) {
       for (int i = 0 ; i < lenC ; i++) {
         switch (characters.get(i)) {
