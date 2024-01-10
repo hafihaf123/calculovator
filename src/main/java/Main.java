@@ -1,4 +1,4 @@
-}import java.math.BigDecimal;
+import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 
@@ -48,7 +48,7 @@ class Expression1 {
         else {
           if (Utility.isDigit(arr[i-1])){
             String numberInList = numbers.get(numi);
-            numberInList += arrI;
+            numberInList += arr[i];
             numbers.set(numi, numberInList);
           }
           else {
