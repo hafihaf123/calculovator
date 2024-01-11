@@ -168,14 +168,12 @@ class Expression1 {
           case "*", "x" -> op = priorityOperations.MULTIPLY;
           case "/", "÷" -> op = priorityOperations.DIVIDE;
           case "^", "**", "pow" -> op = priorityOperations.POWER;
-		  default -> op = null;
+		  default -> throw new IllegalArgumentException("priority operation not expected");
         }
 		Utility.priorityOperation(numbers, characters, i, op);
-        lenC = characters.size();
+		lenC = characters.size();
       }
     }
-    
-    lenC = characters.size();
     
     BigDecimal result = new BigDecimal(numbers.get(0));
     
@@ -223,7 +221,7 @@ class Utility {
   List<String> numbers,
   List<String> characters,
   int i, 
-  priorityOperations op
+  priorityOperations op 
   ) {
     BigDecimal first = new BigDecimal(numbers.get(i));
     BigDecimal second = new BigDecimal(numbers.get(i+1));
@@ -235,7 +233,6 @@ class Utility {
       }
       case MULTIPLY -> res = first.multiply(second);
       case POWER -> res = first.pow(second.intValue());
-      default -> throw new IllegalArgumentException("priority operation not expected");
     }
     Utility.replaceRange(numbers, i, i+1, String.valueOf(res));
     characters.remove(i);
