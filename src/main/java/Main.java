@@ -69,7 +69,7 @@ class Expression1 {
           if (Utility.isDigit(arr[i-1])){
             if (!characters.isEmpty()) 
               chari++;
-            characters.add(String.valueOf(c));
+              characters.add(String.valueOf(c));
           }
           else {
             String characterInList = characters.get(chari);
@@ -124,8 +124,6 @@ class Expression1 {
         List<String> braceNumList = new ArrayList<>(numbers.subList( start, end));
         braceNumList.add(numbers.get(end));
         List<String> braceCharList = new ArrayList<>(characters.subList( start, end));
-        System.out.println(braceNumList);
-        System.out.println(braceCharList);
         result = eval(braceNumList, braceCharList);
         Utility.replaceRange(numbers, start, end, result);
         
@@ -165,11 +163,14 @@ class Expression1 {
     
     while (Utility.listContains(characters, "*/÷^abcdefghijklmnopqrstuvwxyz")) {
       for (int i = 0 ; i < lenC ; i++) {
-        switch (characters.get(i)) {
-          case "*", "x" -> Utility.priorityOperation(numbers, characters, i, priorityOperations.MULTIPLY);
-          case "/", "÷" -> Utility.priorityOperation(numbers, characters, i, priorityOperations.DIVIDE);
-          case "^", "**", "pow" -> Utility.priorityOperation(numbers, characters, i, priorityOperations.POWER);
+        priorityOperations op;
+		switch (characters.get(i)) {
+          case "*", "x" -> op = priorityOperations.MULTIPLY;
+          case "/", "÷" -> op = priorityOperations.DIVIDE;
+          case "^", "**", "pow" -> op = priorityOperations.POWER;
+		  default -> op = null;
         }
+		Utility.priorityOperation(numbers, characters, i, op);
         lenC = characters.size();
       }
     }
@@ -218,7 +219,12 @@ class Utility {
     return c == '.' || c == ',';
   }
 
-  public static void priorityOperation(List<String> numbers, List<String> characters, int i, priorityOperations op) {
+  public static void priorityOperation(
+  List<String> numbers,
+  List<String> characters,
+  int i, 
+  priorityOperations op
+  ) {
     BigDecimal first = new BigDecimal(numbers.get(i));
     BigDecimal second = new BigDecimal(numbers.get(i+1));
     BigDecimal res = new BigDecimal(0);
@@ -229,7 +235,7 @@ class Utility {
       }
       case MULTIPLY -> res = first.multiply(second);
       case POWER -> res = first.pow(second.intValue());
-      default -> System.out.println("Error, priority operation not expected");
+      default -> throw new IllegalArgumentException("priority operation not expected");
     }
     Utility.replaceRange(numbers, i, i+1, String.valueOf(res));
     characters.remove(i);
