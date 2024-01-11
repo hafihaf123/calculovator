@@ -40,19 +40,21 @@ class Expression1 {
     int i, numi = 0, chari = 0;
     
     for(i = 0 ; i < arr.length ; i++) {
-      if (Utility.isDigit(arr[i])) {
+      char c = arr[i];
+	  if (c == ',') c = '.';
+	  if (Utility.isDigit(c)) {
         if (i == 0) {
           isFirstNumber = true;
-          numbers.add(String.valueOf(arr[i]));
+          numbers.add(String.valueOf(c));
         }
         else {
           if (Utility.isDigit(arr[i-1])){
             String numberInList = numbers.get(numi);
-            numberInList += arr[i];
+            numberInList += c;
             numbers.set(numi, numberInList);
           }
           else {
-            numbers.add(String.valueOf(arr[i]));
+            numbers.add(String.valueOf(c));
             numi++;
           } 
         }
@@ -61,17 +63,17 @@ class Expression1 {
       else {
         if (i == 0) {
           isFirstNumber = false;
-          characters.add(String.valueOf(arr[i]));
+          characters.add(String.valueOf(c));
         }
         else {
           if (Utility.isDigit(arr[i-1])){
             if (!characters.isEmpty()) 
               chari++;
-            characters.add(String.valueOf(arr[i]));
+            characters.add(String.valueOf(c));
           }
           else {
             String characterInList = characters.get(chari);
-            characterInList += arr[i];
+            characterInList += c;
             characters.set(chari, characterInList);
           } 
         }
