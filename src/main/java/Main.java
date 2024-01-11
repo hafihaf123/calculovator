@@ -8,10 +8,13 @@ public class Main {
   {
      Scanner sc = new Scanner(System.in);
      String input;
+	 
+	 System.out.println("Welcome to calculovator!\nto exit, type 'exit' or 'ex'");
 
      while (true) {
        input = sc.nextLine();
        if(Objects.equals(input, "exit")) break;
+	   if(Objects.equals(input, "ex")) break;
        try {
          String result = Expression1.parse(input);
          System.out.println(result);
