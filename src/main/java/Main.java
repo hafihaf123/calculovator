@@ -5,12 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
-enum priorityOperations {
-    MULTIPLY,
-    DIVIDE,
-    POWER
-}
-
 public class Main {
 
     public static void main(String[] args) {
@@ -283,4 +277,10 @@ class Utility {
         characters.remove(i);
     }
 
+}
+
+enum priorityOperations {
+    MULTIPLY,
+    DIVIDE,
+    POWER
 }
