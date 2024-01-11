@@ -168,7 +168,7 @@ class Expression1 {
           case "*", "x" -> op = priorityOperations.MULTIPLY;
           case "/", "÷" -> op = priorityOperations.DIVIDE;
           case "^", "**", "pow" -> op = priorityOperations.POWER;
-		  default -> throw new IllegalArgumentException("operation not expected");
+		  default -> throw new IllegalArgumentException("operation not expected: '" + characters.get(i) + "'");
         }
 		Utility.priorityOperation(numbers, characters, i, op);
 		lenC = characters.size();
@@ -181,7 +181,7 @@ class Expression1 {
       switch (characters.get(i)) {
         case "+" -> result = result.add(new BigDecimal(numbers.get(i + 1)));
         case "-" -> result = result.subtract(new BigDecimal(numbers.get(i + 1)));
-		default -> throw new IllegalArgumentException("operation not expected");
+		default -> throw new IllegalArgumentException("operation not expected: '" + characters.get(i) + "'");
       }
     }
     
