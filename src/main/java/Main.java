@@ -2,6 +2,7 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,62 +12,66 @@ import java.util.Scanner;
 /*
 TODO
 [x] handle whitespace
-[ ] handle multiple consecutive operators (++, +-, *+, *-, /+, /-)
+[x] handle multiple consecutive operators (++, +-, *+, *-, /+, /-, ^+, ^-)
 [ ] handle redundant parenthesis '((2+3)*4)'
 [ ] handle operations with 'e'
 */
 
 public class Main {
-
+    
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
         String input;
-
+        
         //noinspection SpellCheckingInspection
         System.out.println("Welcome to calculovator!\nto exit, type 'exit' or 'ex'");
-
+        
         while (true) {
             input = sc.nextLine();
             if ("exit".equals(input)) break;
             if ("ex".equals(input)) break;
             try {
-                String result = Expression1.parse(input);
+                String result = Expression.parse(input);
                 System.out.println(result);
             } catch (IllegalArgumentException e) {
                 System.out.println("Error: " + e.getMessage());
             }
         }
-
+        
         System.out.println("bye");
         sc.close();
     }
 }
 
-class Expression1 {
-
+class Expression {
+	
+	static int precision = 10;
+	static RoundingMode roundingMode = RoundingMode.HALF_UP;
+	static MathContext mathContext = new MathContext(precision, roundingMode);
+	
     static String parse(@NotNull String expression) {
-
+        
         if (expression.isEmpty()) throw new IllegalArgumentException("expression can't be empty");
-
+        
         String result;
-
+        
         List<String> numbers = new ArrayList<>();
         List<String> characters = new ArrayList<>();
-
+        
         char[] arr = expression.toCharArray();
         boolean isFirstNumber = true;
-
+        
         int i, numIndex = 0, charIndex = 0, whitespaceNumber = 0;
-
+        
         StringBuilder numberInList = new StringBuilder();
         StringBuilder characterInList = new StringBuilder();
-
+        
         for (i = 0; i < arr.length; i++) {
             char c = arr[i];
             
             if (Character.isWhitespace(c)) {
                 if (whitespaceNumber < i-1) whitespaceNumber++;
-	            continue;
+                continue;
             }
             if (c == ',') c = '.';
             
@@ -85,9 +90,9 @@ class Expression1 {
                         numbers.add(String.valueOf(c));
                         numIndex++;
                     }
-	                whitespaceNumber = 0;
+                    whitespaceNumber = 0;
                 }
-
+                
             } else {
                 if (i == 0) {
                     isFirstNumber = false;
@@ -103,19 +108,19 @@ class Expression1 {
                         characterInList.append(c);
                         characters.set(charIndex, characterInList.toString());
                     }
-	                whitespaceNumber = 0;
+                    whitespaceNumber = 0;
                 }
-
+                
             }
         }
         
-
+        
         if (!isFirstNumber) {
             
             if (numbers.isEmpty()) throw new IllegalArgumentException("expression not expected: '" + expression + "'");
-
+            
             String firstCh = characters.get(0);
-
+            
             if (firstCh.contains("+")) {
                 firstCh = firstCh.replaceAll("\\+", "");
                 if (firstCh.isEmpty()) characters.remove(0);
@@ -136,10 +141,10 @@ class Expression1 {
         }
         
         if (!characters.isEmpty() && numbers.size()<2) throw new IllegalArgumentException("expression not expected: '" + expression + "'");
-
+        
         List<Integer> braceStartI = new ArrayList<>();
         List<Integer> braceEndI = new ArrayList<>();
-
+        
         for (i = 0; i < characters.size(); i++) {
             char[] c = characters.get(i).toCharArray();
             for (char value : c) {
@@ -151,30 +156,30 @@ class Expression1 {
                 }
             }
         }
-
+        
         if (braceStartI.size() > braceEndI.size()) {
             throw new IllegalArgumentException("Missing closing parenthesis");
         } else if (braceStartI.size() < braceEndI.size()) {
             throw new IllegalArgumentException("Missing opening parenthesis");
         }
-
+        
         if (!braceStartI.isEmpty()) {
             int braceIndex = 0;
             for (int item : braceStartI) {
                 int start = item + 1 - braceIndex;
                 int end = braceEndI.get(braceIndex) - braceIndex;
-
+                
                 List<String> braceNumList = new ArrayList<>(numbers.subList(start, end));
                 braceNumList.add(numbers.get(end));
                 List<String> braceCharList = new ArrayList<>(characters.subList(start, end));
                 result = eval(braceNumList, braceCharList);
                 Utility.replaceRange(numbers, start, end, result);
-
+                
                 String braceStartCh = characters.get(start - 1);
                 braceStartCh = braceStartCh.replaceFirst("\\(", "");
                 String braceEndCh = characters.get(end);
                 braceEndCh = braceEndCh.replaceFirst("\\)", "");
-
+                
                 if (braceStartCh.isEmpty()) {
                     characters.remove(start - 1);
                 } else {
@@ -185,59 +190,79 @@ class Expression1 {
                 } else {
                     characters.set(end, braceEndCh);
                 }
-
+                
                 if (end > start) {
                     characters.subList(start, end).clear();
                 }
-
+                
                 braceIndex++;
             }
         }
-
+        
         return eval(numbers, characters);
-
+        
     }
-
+    
     static String eval(@NotNull List<String> numbers, @NotNull List<String> characters) {
-
+        
         int lenC = characters.size();
         
-
+        
         while (Utility.contains(characters, "^")) {
             for (int i = 0; i < lenC; i++) {
-                String c = characters.get(i);
-                if (Utility.contains(c, "^")) {
+                String op = characters.get(i);
+                if (!Utility.contains(op, "^")) {
                     continue;
                 }
-
-                if (c.equals("^")) {
-                    Calculations.priorityOperation(numbers, characters, i, priorityOperations.POWER);
-                    lenC = characters.size();
-                }
+				
+				Calculations.handleConsecutiveOperators(op);
+	            
+	            priorityOperations priorityOp = switch (op) {
+		            case "^", "^+" -> priorityOperations.POWER;
+					case "^-" -> {
+						numbers.set(i+1, "-" + numbers.get(i+1));
+						characters.set(i, "^");
+						yield priorityOperations.POWER;
+					}
+		            default -> throw new IllegalArgumentException("operation not expected: '" + op + "'");
+	            };
+	            Calculations.priorityOperation(numbers, characters, i, priorityOp);
+	            lenC = characters.size();
             }
         }
-
-        while (Utility.contains(characters, "*/÷")) {
+        
+        while (Utility.contains(characters, "*/")) {
             for (int i = 0; i < lenC; i++) {
-                String c = characters.get(i);
-                if (Utility.contains(c, "*x/÷")) {
+                String op = characters.get(i);
+                if (!Utility.contains(op, "*/")) {
                     continue;
                 }
-                priorityOperations op = switch (c) {
-                    case "*", "x" -> priorityOperations.MULTIPLY;
-                    case "/", "÷" -> priorityOperations.DIVIDE;
-                    default -> throw new IllegalArgumentException("operation not expected: '" + c + "'");
+                op = Calculations.handleConsecutiveOperators(op);
+                priorityOperations priorityOp = switch (op) {
+                    case "*", "*+" -> priorityOperations.MULTIPLY;
+					case "*-" -> {
+						numbers.set(i+1, "-" + numbers.get(i+1));
+						characters.set(i, "*");
+						yield priorityOperations.MULTIPLY;
+					}
+                    case "/", "/+" -> priorityOperations.DIVIDE;
+	                case "/-" -> {
+		                numbers.set(i+1, "-" + numbers.get(i+1));
+		                characters.set(i, "/");
+		                yield priorityOperations.DIVIDE;
+	                }
+                    default -> throw new IllegalArgumentException("operation not expected: '" + op + "'");
                 };
-                Calculations.priorityOperation(numbers, characters, i, op);
+                Calculations.priorityOperation(numbers, characters, i, priorityOp);
                 lenC = characters.size();
             }
         }
-
-        BigDecimal result = new BigDecimal(numbers.get(0));
-
+        
+        BigDecimal result = new BigDecimal(numbers.get(0), mathContext);
+        
         for (int i = 0; i < lenC; i++) {
             String op = characters.get(i);
-            BigDecimal number = new BigDecimal(numbers.get(i+1));
+            BigDecimal number = new BigDecimal(numbers.get(i+1), mathContext);
             
             op = Calculations.handleConsecutiveOperators(op);
             
@@ -248,37 +273,35 @@ class Expression1 {
             };
             
         }
-
+        
         return String.valueOf(result);
     }
     
 }
 
 class Utility {
-
+    
     static boolean contains(@NotNull List<String> list, @NotNull String x) {
-        String listI;
         char[] arr = x.toCharArray();
-
+        
         for (String s : list) {
-            listI = s;
             for (char c : arr) {
-                if (listI.contains(String.valueOf(c))) return true;
+                if (s.contains(String.valueOf(c))) return true;
             }
         }
         return false;
     }
-
+    
     static boolean contains(String checking, @NotNull String x) {
         char[] arr = x.toCharArray();
-
+        
         for (char s : arr) {
             if (checking.contains(String.valueOf(s))) return true;
         }
         return false;
     }
-	
-	@Contract(pure = true)
+    
+    @Contract(pure = true)
     static int countOccurrences(@NotNull String checking, char x) {
         char[] arr = checking.toCharArray();
         int count = 0;
@@ -287,7 +310,7 @@ class Utility {
         }
         return count;
     }
-
+    
     static boolean isDigit(char c) {
         if (Character.isDigit(c)) return true;
         return c == '.' || c == ',';
@@ -299,20 +322,38 @@ class Utility {
             list.subList(from + 1, to + 1).clear();
         }
     }
-
+    
 }
 
 class Calculations {
+	
+	static int precision = Expression.precision + 1;
+	static RoundingMode roundingMode = RoundingMode.DOWN;
+	static MathContext mathContext = new MathContext(precision, roundingMode);
     
     @NotNull
     static String handleConsecutiveOperators(@NotNull String op) {
-        if (op.length()>1 && Utility.contains(op, "+") || Utility.contains(op, "-")) {
+        StringBuilder res = new StringBuilder(op);
+		if (op.length()>1 /*&& Utility.contains(op, "+-")*/ /*&& !Utility.containsOnly(op, "/*")*/) {
+			if (Utility.countOccurrences(op, '*') +
+					Utility.countOccurrences(op, '/') +
+					Utility.countOccurrences(op, '^') > 1) throw new IllegalArgumentException("operation not expected: '" + op + "'");
+			res.setLength(0);
+            if (Utility.contains(op, "*")) {
+				res.append("*");
+	        } else if (Utility.contains(op, "/")) {
+				res.append("/");
+            } else if (Utility.contains(op, "^")) {
+				res.append("^");
+            }
             int plusCount = Utility.countOccurrences(op, '+');
             int minusCount = Utility.countOccurrences(op, '-');
-            if (plusCount%2 == 0 && minusCount%2 == 0) op = "+";
-            else op = "-";
+			
+			if (plusCount == 1 && minusCount == 0) res.append("+");
+            else if (plusCount % 2 == 0 && minusCount % 2 == 0) res.append("+");
+            else res.append("-");
         }
-        return op;
+        return res.toString();
     }
     
     static void priorityOperation(
@@ -323,12 +364,11 @@ class Calculations {
     ) {
         BigDecimal first = new BigDecimal(numbers.get(i));
         BigDecimal second = new BigDecimal(numbers.get(i + 1));
-        BigDecimal res = new BigDecimal(0);
+        BigDecimal res = new BigDecimal(0, mathContext);
         switch (op) {
             case DIVIDE -> {
-                int scale = 10;
                 try {
-                    res = first.divide(second, scale, RoundingMode.HALF_UP);
+                    res = first.divide(second, mathContext);
                 } catch (ArithmeticException e) {
                     throw new IllegalArgumentException("Division by zero");
                 }
@@ -339,7 +379,11 @@ class Calculations {
                     int secondInt = second.intValueExact();
                     res = first.pow(secondInt);
                 } catch (ArithmeticException e) {
-                    res = BigDecimal.valueOf(Math.exp(second.doubleValue() * Math.log(first.doubleValue())));
+					double computedValue = Math.exp(second.doubleValue() * Math.log(first.doubleValue()));
+                    res = new BigDecimal(
+							Double.toString(computedValue),
+		                    mathContext
+                    );
                 }
             }
         }
