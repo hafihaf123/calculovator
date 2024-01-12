@@ -1,3 +1,6 @@
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -5,12 +8,21 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
+/*
+TODO
+[x] handle whitespace
+[ ] handle multiple consecutive operators (++, +-, *+, *-, /+, /-)
+[ ] handle redundant parenthesis '((2+3)*4)'
+[ ] handle operations with 'e'
+*/
+
 public class Main {
 
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
         String input;
 
+        //noinspection SpellCheckingInspection
         System.out.println("Welcome to calculovator!\nto exit, type 'exit' or 'ex'");
 
         while (true) {
@@ -20,7 +32,7 @@ public class Main {
             try {
                 String result = Expression1.parse(input);
                 System.out.println(result);
-            } catch (Exception e) {
+            } catch (IllegalArgumentException e) {
                 System.out.println("Error: " + e.getMessage());
             }
         }
@@ -32,7 +44,9 @@ public class Main {
 
 class Expression1 {
 
-    public static String parse(String expression) {
+    static String parse(@NotNull String expression) {
+
+        if (expression.isEmpty()) throw new IllegalArgumentException("expression can't be empty");
 
         String result;
 
@@ -42,51 +56,73 @@ class Expression1 {
         char[] arr = expression.toCharArray();
         boolean isFirstNumber = true;
 
-        int i, numi = 0, chari = 0;
+        int i, numIndex = 0, charIndex = 0, whitespaceNumber = 0;
+
+        StringBuilder numberInList = new StringBuilder();
+        StringBuilder characterInList = new StringBuilder();
 
         for (i = 0; i < arr.length; i++) {
             char c = arr[i];
+            
+            if (Character.isWhitespace(c)) {
+                if (whitespaceNumber < i-1) whitespaceNumber++;
+	            continue;
+            }
             if (c == ',') c = '.';
+            
             if (Utility.isDigit(c)) {
                 if (i == 0) {
                     isFirstNumber = true;
+                    numberInList.append(c);
                     numbers.add(String.valueOf(c));
                 } else {
-                    if (Utility.isDigit(arr[i - 1])) {
-                        String numberInList = numbers.get(numi);
-                        numberInList += c;
-                        numbers.set(numi, numberInList);
+                    if (Utility.isDigit(arr[i - 1 - whitespaceNumber])) {
+                        numberInList.append(c);
+                        numbers.set(numIndex, numberInList.toString());
                     } else {
+                        numberInList.setLength(0);
+                        numberInList.append(c);
                         numbers.add(String.valueOf(c));
-                        numi++;
+                        numIndex++;
                     }
+	                whitespaceNumber = 0;
                 }
 
             } else {
                 if (i == 0) {
                     isFirstNumber = false;
+                    characterInList.append(c);
                     characters.add(String.valueOf(c));
                 } else {
-                    if (Utility.isDigit(arr[i - 1])) {
-                        if (!characters.isEmpty()) chari++;
+                    if (Utility.isDigit(arr[i - 1 - whitespaceNumber])) {
+                        if (!characters.isEmpty()) charIndex++;
+                        characterInList.setLength(0);
+                        characterInList.append(c);
                         characters.add(String.valueOf(c));
                     } else {
-                        String characterInList = characters.get(chari);
-                        characterInList += c;
-                        characters.set(chari, characterInList);
+                        characterInList.append(c);
+                        characters.set(charIndex, characterInList.toString());
                     }
+	                whitespaceNumber = 0;
                 }
 
             }
         }
+        
 
         if (!isFirstNumber) {
+            
+            if (numbers.isEmpty()) throw new IllegalArgumentException("expression not expected: '" + expression + "'");
+
             String firstCh = characters.get(0);
 
             if (firstCh.contains("+")) {
                 firstCh = firstCh.replaceAll("\\+", "");
-                characters.set(0, firstCh);
-                System.out.println(characters.get(0));
+                if (firstCh.isEmpty()) characters.remove(0);
+                else {
+                    characters.set(0, firstCh);
+                    System.out.println(characters.get(0));
+                }
             }
             if (firstCh.contains("-")) {
                 numbers.add(0, "0");
@@ -98,6 +134,8 @@ class Expression1 {
                 characters.set(0, "+" + firstCh);
             }
         }
+        
+        if (!characters.isEmpty() && numbers.size()<2) throw new IllegalArgumentException("expression not expected: '" + expression + "'");
 
         List<Integer> braceStartI = new ArrayList<>();
         List<Integer> braceEndI = new ArrayList<>();
@@ -160,28 +198,29 @@ class Expression1 {
 
     }
 
-    public static String eval(List<String> numbers, List<String> characters) {
+    static String eval(@NotNull List<String> numbers, @NotNull List<String> characters) {
 
         int lenC = characters.size();
-	    
-	    while (Utility.contains(characters, "^")) {
-		    for (int i = 0; i < lenC; i++) {
-			    String c = characters.get(i);
-			    if (Utility.doesNotContain(c, "^")) {
-				    continue;
-			    }
-			    
-			    if (c.equals("^")) {
-				    Utility.priorityOperation(numbers, characters, i, priorityOperations.POWER);
-				    lenC = characters.size();
-			    }
-		    }
-	    }
+        
+
+        while (Utility.contains(characters, "^")) {
+            for (int i = 0; i < lenC; i++) {
+                String c = characters.get(i);
+                if (Utility.contains(c, "^")) {
+                    continue;
+                }
+
+                if (c.equals("^")) {
+                    Calculations.priorityOperation(numbers, characters, i, priorityOperations.POWER);
+                    lenC = characters.size();
+                }
+            }
+        }
 
         while (Utility.contains(characters, "*/÷")) {
             for (int i = 0; i < lenC; i++) {
                 String c = characters.get(i);
-                if (Utility.doesNotContain(c, "*x/÷")) {
+                if (Utility.contains(c, "*x/÷")) {
                     continue;
                 }
                 priorityOperations op = switch (c) {
@@ -189,7 +228,7 @@ class Expression1 {
                     case "/", "÷" -> priorityOperations.DIVIDE;
                     default -> throw new IllegalArgumentException("operation not expected: '" + c + "'");
                 };
-                Utility.priorityOperation(numbers, characters, i, op);
+                Calculations.priorityOperation(numbers, characters, i, op);
                 lenC = characters.size();
             }
         }
@@ -197,28 +236,27 @@ class Expression1 {
         BigDecimal result = new BigDecimal(numbers.get(0));
 
         for (int i = 0; i < lenC; i++) {
-            result = switch (characters.get(i)) {
-                case "+" -> result.add(new BigDecimal(numbers.get(i + 1)));
-                case "-" -> result.subtract(new BigDecimal(numbers.get(i + 1)));
-                default -> throw new IllegalArgumentException("operation not expected: '" + characters.get(i) + "'");
+            String op = characters.get(i);
+            BigDecimal number = new BigDecimal(numbers.get(i+1));
+            
+            op = Calculations.handleConsecutiveOperators(op);
+            
+            result = switch (op) {
+                case "+" -> result.add(number);
+                case "-" -> result.subtract(number);
+                default -> throw new IllegalArgumentException("operation not expected: '" + op + "'");
             };
+            
         }
 
         return String.valueOf(result);
     }
-
+    
 }
 
 class Utility {
 
-    public static void replaceRange(List<String> list, int from, int to, final String toReplace) {
-        Collections.fill(list.subList(from, to + 1), toReplace);
-        if (to >= from + 1) {
-            list.subList(from + 1, to + 1).clear();
-        }
-    }
-
-    public static boolean contains(List<String> list, String x) {
+    static boolean contains(@NotNull List<String> list, @NotNull String x) {
         String listI;
         char[] arr = x.toCharArray();
 
@@ -231,25 +269,57 @@ class Utility {
         return false;
     }
 
-    public static boolean doesNotContain(String checking, String x) {
+    static boolean contains(String checking, @NotNull String x) {
         char[] arr = x.toCharArray();
 
         for (char s : arr) {
-            if (checking.contains(String.valueOf(s))) return false;
+            if (checking.contains(String.valueOf(s))) return true;
         }
-        return true;
+        return false;
+    }
+	
+	@Contract(pure = true)
+    static int countOccurrences(@NotNull String checking, char x) {
+        char[] arr = checking.toCharArray();
+        int count = 0;
+        for (char c: arr) {
+            if (c == x) count++;
+        }
+        return count;
     }
 
-    public static boolean isDigit(char c) {
+    static boolean isDigit(char c) {
         if (Character.isDigit(c)) return true;
         return c == '.' || c == ',';
     }
+    
+    static void replaceRange(@NotNull List<String> list, int from, int to, final String toReplace) {
+        Collections.fill(list.subList(from, to + 1), toReplace);
+        if (to >= from + 1) {
+            list.subList(from + 1, to + 1).clear();
+        }
+    }
 
-    public static void priorityOperation(
-            List<String> numbers,
+}
+
+class Calculations {
+    
+    @NotNull
+    static String handleConsecutiveOperators(@NotNull String op) {
+        if (op.length()>1 && Utility.contains(op, "+") || Utility.contains(op, "-")) {
+            int plusCount = Utility.countOccurrences(op, '+');
+            int minusCount = Utility.countOccurrences(op, '-');
+            if (plusCount%2 == 0 && minusCount%2 == 0) op = "+";
+            else op = "-";
+        }
+        return op;
+    }
+    
+    static void priorityOperation(
+            @NotNull List<String> numbers,
             List<String> characters,
             int i,
-            priorityOperations op
+            @NotNull priorityOperations op
     ) {
         BigDecimal first = new BigDecimal(numbers.get(i));
         BigDecimal second = new BigDecimal(numbers.get(i + 1));
@@ -257,26 +327,25 @@ class Utility {
         switch (op) {
             case DIVIDE -> {
                 int scale = 10;
-	            try {
-		            res = first.divide(second, scale, RoundingMode.HALF_UP);
-	            } catch (ArithmeticException e) {
-		            throw new ArithmeticException("Division by zero");
-	            }
+                try {
+                    res = first.divide(second, scale, RoundingMode.HALF_UP);
+                } catch (ArithmeticException e) {
+                    throw new IllegalArgumentException("Division by zero");
+                }
             }
             case MULTIPLY -> res = first.multiply(second);
             case POWER -> {
-	            try {
-					int secondInt = second.intValueExact();
-		            res = first.pow(secondInt);
-	            } catch (ArithmeticException e) {
-		            res = BigDecimal.valueOf(Math.exp(second.doubleValue() * Math.log(first.doubleValue())));
-	            }
+                try {
+                    int secondInt = second.intValueExact();
+                    res = first.pow(secondInt);
+                } catch (ArithmeticException e) {
+                    res = BigDecimal.valueOf(Math.exp(second.doubleValue() * Math.log(first.doubleValue())));
+                }
             }
         }
         Utility.replaceRange(numbers, i, i + 1, String.valueOf(res));
         characters.remove(i);
     }
-
 }
 
 enum priorityOperations {
