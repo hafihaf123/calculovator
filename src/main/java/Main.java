@@ -38,7 +38,7 @@ public class Main {
             }
         }
         
-        System.out.println("byee");
+        System.out.println("bye");
         sc.close();
     }
 }
