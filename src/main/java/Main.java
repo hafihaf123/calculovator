@@ -14,6 +14,7 @@ TODO
 [x] handle whitespace
 [x] handle multiple consecutive operators (++, +-, *+, *-, /+, /-, ^+, ^-)
 [x] handle redundant parenthesis '((2+3)*4)'
+[ ] check '1-(2+3-(2-4))'
 [ ] handle operations with 'e'
 */
 
