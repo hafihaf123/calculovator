@@ -70,7 +70,7 @@ class Expression {
             char c = arr[i];
             
             if (Character.isWhitespace(c)) {
-                if (whitespaceNumber < i-1) whitespaceNumber++;
+                if (whitespaceNumber < i) whitespaceNumber++;
                 continue;
             }
             if (c == ',') c = '.';
