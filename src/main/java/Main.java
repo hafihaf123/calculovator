@@ -13,7 +13,7 @@ import java.util.Scanner;
 TODO
 [x] handle whitespace
 [x] handle multiple consecutive operators (++, +-, *+, *-, /+, /-, ^+, ^-)
-[ ] handle redundant parenthesis '((2+3)*4)'
+[x] handle redundant parenthesis '((2+3)*4)'
 [ ] handle operations with 'e'
 */
 
@@ -38,7 +38,7 @@ public class Main {
             }
         }
         
-        System.out.println("byeee");
+        System.out.println("bye");
         sc.close();
     }
 }
@@ -163,11 +163,11 @@ class Expression {
             throw new IllegalArgumentException("Missing opening parenthesis");
         }
         
-        if (!braceStartI.isEmpty()) {
+        while (!braceStartI.isEmpty()) {
             int braceIndex = 0;
-            for (int item : braceStartI) {
-                int start = item + 1 - braceIndex;
-                int end = braceEndI.get(braceIndex) - braceIndex;
+            for (i = braceStartI.size() - 1; i >= 0; i--) {
+                int start = braceStartI.get(i) + 1;
+                int end = braceEndI.get(0);
                 
                 List<String> braceNumList = new ArrayList<>(numbers.subList(start, end));
                 braceNumList.add(numbers.get(end));
@@ -175,7 +175,7 @@ class Expression {
                 result = eval(braceNumList, braceCharList);
                 Utility.replaceRange(numbers, start, end, result);
                 
-                String braceStartCh = characters.get(start - 1);
+                String braceStartCh = characters.get(start - 1 + braceIndex);
                 braceStartCh = braceStartCh.replaceFirst("\\(", "");
                 String braceEndCh = characters.get(end);
                 braceEndCh = braceEndCh.replaceFirst("\\)", "");
@@ -196,6 +196,9 @@ class Expression {
                 }
                 
                 braceIndex++;
+                
+                braceStartI.remove(i);
+                braceEndI.remove(i);
             }
         }
         
